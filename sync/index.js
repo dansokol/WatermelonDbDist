@@ -22,93 +22,93 @@ function synchronize({
   _unsafeBatchPerCollection: _unsafeBatchPerCollection
 }) {
   return new Promise(function ($return, $error) {
-    var resetCount, lastPulledAt, remoteChanges, newLastPulledAt, localChanges;
+    var resetCount, lastPulledAt, localChanges, remoteChanges, newLastPulledAt;
     (0, _helpers.ensureActionsEnabled)(database);
     resetCount = database._resetCount;
     log && (log.startedAt = new Date()); // TODO: Wrap the three computionally intensive phases in `requestIdleCallback`
-    // pull phase
 
     return Promise.resolve((0, _impl.getLastPulledAt)(database)).then(function ($await_2) {
       try {
         lastPulledAt = $await_2;
-        log && (log.lastPulledAt = lastPulledAt);
-        return Promise.resolve(pullChanges({
-          lastPulledAt: lastPulledAt
-        })).then(function ($await_3) {
-          try {
-            ({
-              changes: remoteChanges,
-              timestamp: newLastPulledAt
-            } = $await_3);
-            log && (log.newLastPulledAt = newLastPulledAt);
-            return Promise.resolve(database.action(function (action) {
-              return new Promise(function ($return, $error) {
-                (0, _helpers.ensureSameDatabase)(database, resetCount);
-                return Promise.resolve((0, _impl.getLastPulledAt)(database)).then(function ($await_4) {
-                  try {
-                    (0, _common.invariant)(lastPulledAt === $await_4, '[Sync] Concurrent synchronization is not allowed. More than one synchronize() call was running at the same time, and the later one was aborted before committing results to local database.');
-                    return Promise.resolve(action.subAction(function () {
-                      return (0, _impl.applyRemoteChanges)(database, remoteChanges, sendCreatedAsUpdated, log, _unsafeBatchPerCollection);
-                    })).then(function () {
-                      try {
-                        return Promise.resolve((0, _impl.setLastPulledAt)(database, newLastPulledAt)).then(function () {
-                          try {
-                            return $return();
-                          } catch ($boundEx) {
-                            return $error($boundEx);
-                          }
-                        }, $error);
-                      } catch ($boundEx) {
-                        return $error($boundEx);
-                      }
-                    }, $error);
-                  } catch ($boundEx) {
-                    return $error($boundEx);
-                  }
-                }, $error);
-              });
-            }, 'sync-synchronize-apply')).then(function () {
-              try {
-                return Promise.resolve((0, _impl.fetchLocalChanges)(database)).then(function ($await_8) {
-                  try {
-                    localChanges = $await_8;
-                    (0, _helpers.ensureSameDatabase)(database, resetCount);
+        log && (log.lastPulledAt = lastPulledAt); // push phase
 
-                    if (!(0, _helpers.isChangeSetEmpty)(localChanges.changes)) {
-                      return Promise.resolve(pushChanges({
-                        changes: localChanges.changes,
-                        lastPulledAt: newLastPulledAt
-                      })).then(function () {
+        return Promise.resolve((0, _impl.fetchLocalChanges)(database)).then(function ($await_3) {
+          try {
+            localChanges = $await_3;
+            (0, _helpers.ensureSameDatabase)(database, resetCount);
+
+            if (!(0, _helpers.isChangeSetEmpty)(localChanges.changes)) {
+              return Promise.resolve(pushChanges({
+                changes: localChanges.changes,
+                lastPulledAt: lastPulledAt
+              })).then(function () {
+                try {
+                  (0, _helpers.ensureSameDatabase)(database, resetCount);
+                  return Promise.resolve((0, _impl.markLocalChangesAsSynced)(database, localChanges)).then(function () {
+                    try {
+                      return $If_1.call(this);
+                    } catch ($boundEx) {
+                      return $error($boundEx);
+                    }
+                  }.bind(this), $error);
+                } catch ($boundEx) {
+                  return $error($boundEx);
+                }
+              }.bind(this), $error);
+            } // pull phase
+
+
+            function $If_1() {
+              return Promise.resolve(pullChanges({
+                lastPulledAt: lastPulledAt
+              })).then(function ($await_6) {
+                try {
+                  ({
+                    changes: remoteChanges,
+                    timestamp: newLastPulledAt
+                  } = $await_6);
+                  log && (log.newLastPulledAt = newLastPulledAt);
+                  return Promise.resolve(database.action(function (action) {
+                    return new Promise(function ($return, $error) {
+                      (0, _helpers.ensureSameDatabase)(database, resetCount);
+                      return Promise.resolve((0, _impl.getLastPulledAt)(database)).then(function ($await_7) {
                         try {
-                          (0, _helpers.ensureSameDatabase)(database, resetCount);
-                          return Promise.resolve((0, _impl.markLocalChangesAsSynced)(database, localChanges)).then(function () {
+                          (0, _common.invariant)(lastPulledAt === $await_7, '[Sync] Concurrent synchronization is not allowed. More than one synchronize() call was running at the same time, and the later one was aborted before committing results to local database.');
+                          return Promise.resolve(action.subAction(function () {
+                            return (0, _impl.applyRemoteChanges)(database, remoteChanges, sendCreatedAsUpdated, log, _unsafeBatchPerCollection);
+                          })).then(function () {
                             try {
-                              return function () {
-                                log && (log.finishedAt = new Date());
-                                return $return();
-                              }.call(this);
+                              return Promise.resolve((0, _impl.setLastPulledAt)(database, newLastPulledAt)).then(function () {
+                                try {
+                                  return $return();
+                                } catch ($boundEx) {
+                                  return $error($boundEx);
+                                }
+                              }, $error);
                             } catch ($boundEx) {
                               return $error($boundEx);
                             }
-                          }.bind(this), $error);
+                          }, $error);
                         } catch ($boundEx) {
                           return $error($boundEx);
                         }
-                      }.bind(this), $error);
-                    }
-
-                    return function () {
+                      }, $error);
+                    });
+                  }, 'sync-synchronize-apply')).then(function () {
+                    try {
                       log && (log.finishedAt = new Date());
                       return $return();
-                    }.call(this);
-                  } catch ($boundEx) {
-                    return $error($boundEx);
-                  }
-                }.bind(this), $error);
-              } catch ($boundEx) {
-                return $error($boundEx);
-              }
-            }.bind(this), $error);
+                    } catch ($boundEx) {
+                      return $error($boundEx);
+                    }
+                  }, $error);
+                } catch ($boundEx) {
+                  return $error($boundEx);
+                }
+              }, $error);
+            }
+
+            return $If_1.call(this);
           } catch ($boundEx) {
             return $error($boundEx);
           }

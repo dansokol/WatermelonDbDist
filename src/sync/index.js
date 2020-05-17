@@ -63,11 +63,21 @@ export async function synchronize({
   log && (log.startedAt = new Date())
 
   // TODO: Wrap the three computionally intensive phases in `requestIdleCallback`
-
-  // pull phase
   const lastPulledAt = await getLastPulledAt(database)
   log && (log.lastPulledAt = lastPulledAt)
 
+  // push phase
+  const localChanges = await fetchLocalChanges(database)
+
+  ensureSameDatabase(database, resetCount)
+  if (!isChangeSetEmpty(localChanges.changes)) {
+    await pushChanges({ changes: localChanges.changes, lastPulledAt: lastPulledAt })
+
+    ensureSameDatabase(database, resetCount)
+    await markLocalChangesAsSynced(database, localChanges)
+  }
+
+  // pull phase
   const { changes: remoteChanges, timestamp: newLastPulledAt } = await pullChanges({ lastPulledAt })
   log && (log.newLastPulledAt = newLastPulledAt)
 
@@ -88,17 +98,6 @@ export async function synchronize({
     )
     await setLastPulledAt(database, newLastPulledAt)
   }, 'sync-synchronize-apply')
-
-  // push phase
-  const localChanges = await fetchLocalChanges(database)
-
-  ensureSameDatabase(database, resetCount)
-  if (!isChangeSetEmpty(localChanges.changes)) {
-    await pushChanges({ changes: localChanges.changes, lastPulledAt: newLastPulledAt })
-
-    ensureSameDatabase(database, resetCount)
-    await markLocalChangesAsSynced(database, localChanges)
-  }
 
   log && (log.finishedAt = new Date())
 }
