@@ -38,7 +38,7 @@ function fetchLocalChangesForCollection(collection) {
         // perf-critical - using mutation
         changedRecords.forEach(function (record) {
           var status = record._raw._status;
-          (0, _common.invariant)('created' === status || 'updated' === status, "Invalid changed record status"); // TODO: It would be best to omit _status, _changed fields, since they're not necessary for the server
+          //(0, _common.invariant)('created' === status || 'updated' === status, "Invalid changed record status"); // TODO: It would be best to omit _status, _changed fields, since they're not necessary for the server
           // but this complicates markLocalChangesAsDone, since we don't have the exact copy to compare if record changed
           // TODO: It would probably also be good to only send to server locally changed fields, not full records
 
